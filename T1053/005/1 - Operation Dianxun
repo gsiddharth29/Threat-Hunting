@@ -1,0 +1,41 @@
+Threat Hunting for Operation Dianxun
+	
+Operation Dianxun (Identified by McAfee Advanced Threat Research in March of this Year) was an espionage campaign allegedly attributed to a Chinese APT group. This campaign was reported to have targeted the telecom sector with the goal of accessing sensitive data and spying on companies related to 5G technology. In was also discovered that the malware used similar tactics, techniques and procedures (TTPs) to those observed in earlier campaigns publicly attributed to the threat actors RedDelta and Mustang Panda. McAfee further reported with a medium level of confidence that the attackers used a phishing website masquerading as the Huawei company career page to target people working in the telecommunications industry “hxxp:\\update.careerhuawei.net”.
+
+Technical Observation from the Operation Dianxun Campaign:
+	The DotNet Utility creates a scheduled task that will run "cmd.exe /c" with the previous payload downloaded and create a registry key.
+
+Hypothesis:
+	An adversary attempting to create a scheduled task on Windows Endpoint via an executable will run "cmd.exe /c" to download or install malicious program.
+
+Simulation of Malicious Behavior:
+	--/
+      Console.WriteLine("Simulation_T1053.005_Start");
+      System.Diagnostics.Process process = new System.Diagnostics.Process();
+      System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo();
+      startInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+      startInfo.FileName = "cmd.exe";
+      startInfo.Arguments = "/C SCHTASKS /CREATE /SC DAILY /TN "Simulation\TestSchTask" /TR "C:\Windows\System32\cmd.exe /C dir/w" /ST 09:40";
+      process.StartInfo = startInfo;
+      process.Start();
+      Console.WriteLine("Simulation_T1053.005_End");
+	/--
+
+Threat Hunt Process:
+	Reviewing the logs from major Endpoint Detection and Response tool (EDR) tool would be the most appropriate method to hunt for this behavior. When an executable creates a scheduled task, there would be events logged by EDR similar to Scheduled Task Created/Registered. This event would have information such as Target Host, Create Time, Scheduled Task Name, Author of the task, What the task intended to do and When it is run, etc. Additionally, EDR normally records the process tree for every event and in similar way, records the process id for this event which can be used to back track to the previous event such as Process Run/Execution where information such as Execution Time, Target Host, File Name - Parent & Grand Parent, User Name, Command Line Argument, File Hash, Process id - Parent and Target etc.
+	
+	Conducting a search of any available EDR logs would lead to the discovery of potential suspicious behavior. Investigating the results based on the parent process that created the scheduled task could then help in narrowing down the investigation by eliminating known/trusted application within your environment. Next step is to further look for the user who created the scheduled task and the user in whose context the executable was run. This will help in filtering out any known activity carried out for specific tasks/projects based on the business of your organization teams. The forementioned steps eliminates the most common and expected behavior and should eliminate all but that require further investigation.
+	
+	Further investigating the target host, during the run time of the executable to look for other unknown processes that were executed, any detections by the security tools, analyzing the user behavior, etc. would support in picking the anomalies.
+
+	Findings that comes out of the hunt, would have to be validated by the remediation team and accordingly remove the rogue scheduled task and the executable from the target host.
+
+Reference:
+	https://www.mcafee.com/blogs/other-blogs/mcafee-labs/operation-dianxun-cyberespionage-campaign-targeting-telecommunication-companies/
+  https://attack.mitre.org/techniques/T1053/005/
+
+Sample Splunk Query:
+	eventPlatform=Windows AND eventName=ProcessExecution
+	| rename  ProcessId2 as ProcessId1
+	| join ProcessId1
+		[search eventPlatform=Windows eventName=ScheduledTaskCreated SchTaskValue=*cmd.exe* SchTaskArguments="*/C*"]
