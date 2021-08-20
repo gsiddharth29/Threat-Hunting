@@ -32,7 +32,7 @@ Threat Hunt Process:
 
 Reference:
 	https://www.mcafee.com/blogs/other-blogs/mcafee-labs/operation-dianxun-cyberespionage-campaign-targeting-telecommunication-companies/
-  https://attack.mitre.org/techniques/T1053/005/
+ 	https://attack.mitre.org/techniques/T1053/005/
 
 Sample Splunk Query:
 	eventPlatform=Windows AND eventName=ProcessExecution
