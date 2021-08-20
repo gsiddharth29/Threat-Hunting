@@ -1,4 +1,4 @@
-# Threat-Hunts
+# Threat-Hunting
 
 Threat Hunt Notes and Procedure
 
