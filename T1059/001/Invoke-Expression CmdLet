@@ -1,4 +1,4 @@
-Article Title: Threat Hunting for Execution via Microsoft PowerShell Invoke-Expression cmdlets
+Threat Hunting for Execution via Microsoft PowerShell Invoke-Expression cmdlets
 
 What is Microsoft PowerShell and what is it used for?
 	PowerShell is a powerful interactive command-line interface and scripting environment included in the Windows operating system that allows users to manage and automate tasks from the command line. PowerShell commands are commonly seen paired with Cmdlet (lightweight commands) to perform various tasks such as downloading and running executables from the internet directly into system memory without writing to disk. There are many such “command lets” available to use with PowerShell.
