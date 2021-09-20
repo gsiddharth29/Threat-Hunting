@@ -1,0 +1,47 @@
+Persistence via Local Account Creation on Microsoft Windows Endpoints
+	
+Threat Hunt Hypothesis:
+	A threat actor may attempt to establish persistence via local user account creation. To further maintain persistence, the threat actor may then add the new local user to an Administrative group, thus providing elevated rights on that machine. This access can then be abused to run code or harvest credentials through OS Credential Dumping.
+
+Simulation of Malicious Behavior:
+	--/
+		Step 1: Create a new user from cmdline:
+net user TestUser Password@1234 /add
+		Step 2: Add the new user to administrator group:
+			net localgroup administrators TestUser /add
+		Step 3: Finally, delete the test user:
+			net user TestUser /del
+	/--
+
+Threat Hunt Process:
+	Analyzing the Microsoft Security Event Logs or Endpoint Detection and Response (EDR) events would be a place to start the investigation.
+	
+Microsoft Security Events such as 4720 (Local User Creation) and 4732 (Member added to a Security-Enabled Local Group) are the primary events that you should be focusing on. Make sure the relevant logs are collected from the endpoints into the SIEM (if applicable) to be able to perform the investigation.
+
+	Event Id 4720 normally logs on Domain Controllers, Member servers and workstations every time a new user object is created. It contains new user related information including: the Source User who created it, Host Name where it’s been created, Time at which the event occurred, Target User that was created, SID of the Source and Target User account, Source and Target Domain Name, etc. By Correlating the above event with Event Id 4732, this would indicate the newly created account added has been added to an administrator group. Event Id 4732 would have additional information required for further investigation such as Source and Target Group Name, Host Name where the event occurred, Time of Event, Source and Target Usernames etc. Building a custom search query to join Event Ids 4732 with 4720 where the Target Group is an Administrator Group based on the Source User and Host Name would assist in fetching the required results. Analyzing the results and filtering out expected or known admin activity would help in identifying anomalies that require validation.
+	
+	Some organizations have EDR that comes very handy for this investigation as it captures more information such as command line arguments and process related information for user account activities. Based on correlating the logs related to User account added to a group and its Parent Process by looking at the command line argument for user that are added to a specific administrator group could identify potentially malicious behavior.
+	
+	Any findings that come out of the investigation would require further validation by the concerned business unit or the responder to understand if the source user is authorized to perform modification on user account, a business requirement for usage of a local privileged user account etc. As a best practice, vendor supplied default local accounts should be disabled and replaced with a domain-based service account.
+
+Reference:
+	https://attack.mitre.org/techniques/1078/003/
+
+Sample Splunk Query:
+Windows AD Log Search:
+	Select *
+	from
+	table_name T1
+	inner join table_name T2
+	on T1.HostName=T2.HostName and T1.SourceUser=T2.SourceUser
+	where
+	T1.event=4732 and T2.event=4720 and T1.TargetGroup=Administrator
+
+EDR Search:
+	Select *
+	from
+	table_name T1
+	inner join table_name T2
+	on T1.HostName=T2.HostName and T1.ProcessId=T2.ParentProcessId
+	where
+	T1.event=UserAccountAddedToAGroup and T2.event=ProcessInfo
