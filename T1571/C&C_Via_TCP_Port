@@ -1,0 +1,40 @@
+Title: Command & Control via Non-Standard TCP Ports using Telnet
+
+Telnet and its security risk:
+	      Telnet is a network protocol. It is used for accessing a target machine remotely, offering a two-way collaborative and text-based communication channel between both the source and target machine. Communications over Telnet however are not encrypted and hence not secure. Because of this limitation, adversaries leverage this protocol for eavesdropping and snooping to gather sensitive information to plan further targeted attacks.
+        
+
+Threat Hunt Hypothesis:
+	      A threat actor may attempt to establish a Command & Control mechanism by opening specific TCP ports on a compromised system and subsequently binding a telnet listener. By running a listener on these ports, the threat actor may then connect to the compromised host to maintain access and issue additional commands. For the purpose of this hunt, we will assume the threat actor has already done this and setup Telnet to listen on TCP Port 5371.
+        
+
+Simulation of Malicious Behavior:
+	--/
+			On Target Machine: Open a terminal and listen on a specific TCP Port using netcat
+				Ex: ncat -l Listening_Port
+        
+			On Attacker Machine: Telnet to the target machine IP on the listening port (TCP 5371 in this case)
+				Ex: Telnet Target_IP Listening_Port
+	/--
+
+
+Threat Hunt Process:
+	      There are two approaches that can be used to hunt and investigate this malicious behavior.
+        
+        The first approach involves firewall logging which provides information such as source <-> destination connection on port/protocol. This could be used to narrow down the internal IP’s that have the listeners running on the TCP ports in question. The source IP can be correlated with any available web proxy logs to determine the source host and possible user. With the hostname identified, Windows Security event 4688 can be investigated during the same timeframe to determine all running programs. 4688 event logs whenever a new program is executed and continue to trigger until the application is terminated. This event logs information such as process name, process id, label, creator of the process and with additional tuning it could also provide command line argument. By eliminating all trusted programs after careful investigation, only suspicious programs would be left which require further investigation to validate legitimacy for any business needs. Remediation of a malicious program should consist of removal of the rogue application, use of malware scanning tools, and rebuilding of the system.
+        
+        The second approach involves an Endpoint Detection & Response (EDR) solution which has the ability to identify the parent <–> child relationship while drawing a process tree for a sequence of events. By looking for network binding/listening events from an internal IP on the TCP ports in question, it becomes possible to narrow down the scope of the investigation. This event would hold key information about the source and destination IP’s, ports and protocol, connection direction, flags, process id etc. By joining this process id with the target process id of the process change events, we would then have the context to identify the process id initiating the connection. After investigating all processes and then eliminating known behavior, anomalies can be identified which can further be investigated and remediated as described above.
+        
+
+Reference:
+        https://attack.mitre.org/techniques/T1571/
+	
+Sample Splunk Query:
+	      Method 1: Basic Sample Query
+		        event_source=firewall_name event_type=network protocol=TCP local_port=5371
+
+	      Method 2: EDR Sample Query
+		        Event_source=EDR event_type=network protocol=TCP local_port=5371 
+            | rename process_id as target_process_id 
+            | join target_process_id, hostname
+            [search event_source=EDR event_type=process_change]
