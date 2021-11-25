@@ -7,10 +7,10 @@ Note: HKEY_LOCAL_MACHINE Contains configuration information particular to the co
 Simulation of Malicious Behavior:
 	--/
 		1. Open regedit.exe on windows test system
-    2. Navigate to the path: Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\
-    3. Create a key: {TEST3454-BGK1-K2K2-3454-451DFER48520}
-    4. Create a sub key (Type: string value) inside the newly created registry path and name it as: "stubpath"
-    5. Add the string value to the above key as "xyz.exe"
+   		2. Navigate to the path: Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\
+    		3. Create a key: {TEST3454-BGK1-K2K2-3454-451DFER48520}
+    		4. Create a sub key (Type: string value) inside the newly created registry path and name it as: "stubpath"
+    		5. Add the string value to the above key as "xyz.exe"
 	/--
 
 Threat Hunt Process:
