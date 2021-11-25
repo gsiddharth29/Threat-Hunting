@@ -1,0 +1,28 @@
+Defense Evasion via Windows Registry modification
+
+Threat Hunt Hypothesis:
+        Adversaries may interact with the Windows Registry to hide configuration information within registry keys, remove information as part of cleanup, or as part of other techniques to aid in persistence and execution. In this case, we are looking for a threat actor who may have added a suspicious executable “xyz.exe” within the stubpath of the registry path “Computer\HKEY_LOCAL_MACHINE \SOFTWARE\Microsoft\Active Setup\Installed Components\{TEST3454-BGK1-K2K2-3454-451DFER48520}”.
+Note: HKEY_LOCAL_MACHINE Contains configuration information particular to the computer (for any user). Active Setup is a mechanism for executing commands once per user early during login.
+
+Simulation of Malicious Behavior:
+	--/
+		1. Open regedit.exe on windows test system
+    2. Navigate to the path: Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Active Setup\Installed Components\
+    3. Create a key: {TEST3454-BGK1-K2K2-3454-451DFER48520}
+    4. Create a sub key (Type: string value) inside the newly created registry path and name it as: "stubpath"
+    5. Add the string value to the above key as "xyz.exe"
+	/--
+
+Threat Hunt Process:
+	      An Endpoint Detection & Response (EDR) tool would be an ideal source for this investigation. Events related to ASEP (Auto-Start Extensibility Points) modification hold information such as the full registry path, registry object name, and the key and string value. This creates a relatively straight forward approach to conduct an initial search.   Any findings from this search should trigger a deep investigation of the parent process that modified the registry along with any child process that is invoked from the execution of the suspicious file added to the subpath.  If malicious registry entries are confirmed, then the entry and source path of the malicious file should be be removed and the registry should be restored to a previously known good state.
+	      Another method of investigating registry changes involves the native windows security event logging which requires setting up the auditing feature for event id 4657. However, this event triggers only if a key value is modified and not the key itself. This  log data provides information such as object name & value, old & new value, etc. which could aid in the completion of the investigation. Any identified suspicious findings would need to be remediated similarly as stated above.
+
+Reference:
+        https://attack.mitre.org/techniques/T1112/ 
+	
+Sample Query:
+	EDR Sample Query:
+	      Event_name=ASEP AND Registry_Object=HKLM\SOFTWARE\Microsoft\Active Setup\Installed Components\{TEST3454-BGK1-K2K2-3454-451DFER48520} AND Registry_Value=stubpath AND Registry_String=xyz.exe
+	
+	Windows Event Sample Query:
+	      Event_source=AD AND event_id=4657 AND Object_Name= HKLM\SOFTWARE\Microsoft\Active Setup\Installed Components\{TEST3454-BGK1-K2K2-3454-451DFER48520} AND Object_Value=stubpath
