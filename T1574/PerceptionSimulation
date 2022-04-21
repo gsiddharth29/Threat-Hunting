@@ -1,0 +1,34 @@
+Lateral Movement & Defense Evasion via DLL Search Order Hijack for Windows Perception Simulation Services
+
+
+Hypothesis:
+	An adversary may attempt to move laterally within a network by hijacking the DLL load process for the Windows Perception Simulation Service. This service loads a very specific DLL file which normally does not exist. By crafting a malicious DLL with the same name (hid.dll) and placing it within the \Windows\System32\PerceptionSimulation directory on a remote host, the adversary can then launch malicious code by restarting the service.
+
+
+Simulation of Malicious Behavior:
+	--/
+			On a sandbox machine: 
+                        1. Build a dll file to do a benign task.   For our example we will call it hid.dll 
+                        2. Pack the file using upx.
+                        Ex: upx C:\..\..\..\hid.dll
+                        3. Place the file in the target path. 
+                        Ex: move C:\..\..\..\hid.dll C:\Windows\System32\PerceptionSimulation\
+                        4. Start the service to execute the malicious code
+
+	/--
+
+
+Threat Hunt Methodology:
+        Security solutions such as an Endpoint Detection & Response (EDR) or a Centralized File Integrity Monitoring tool would be ideal to investigate this behavior. For any file that gets written to a disk, an appropriate file written event should be logged to these security tools.
+	The logged events of interest would contain information related to the file -  such as target file name, target host, username, file hash, process tree, etc. 
+	Any results from these searches would require a more detailed investigation.   Initial steps here might include sandbox analysis or a detailed memory or file forensic investigation to determine malicious intent.    
+        Any intelligence discovered from the above could then be used to build behavioral based indicators or even added to detection tools.   This would assist in detecting similar behavior should it occur in the future.
+        Finally, to fully remediate, any confirmed malicious dll files must be permanently removed from the system.   The compromised system should then be further observed for indications of persistence and potentially reimaged if needed. 
+
+
+Reference:
+        https://attack.mitre.org/techniques/T1574
+	
+        
+Sample Splunk Query:
+	Event_name=FileWritten AND TargetFile=*\Windows\System32\PerceptionSimulation\hid.dll*
