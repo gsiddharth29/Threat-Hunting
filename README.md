@@ -2,6 +2,6 @@
 
 Threat Hunt Notes and Procedure
 
-A Repository for Hunt Notes and Procedure of my recent investigation of various TTP's and APT groups.
+A Repository with Hunt Notes and Procedure of my investigation of various TTP's.
 
-Use the notes as a reference to perform Hunt within your environment.
+You could use the notes as a reference while performing similar Hunt within your environment.
