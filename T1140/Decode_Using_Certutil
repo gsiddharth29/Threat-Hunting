@@ -1,0 +1,33 @@
+Defense Evasion via Decode Files using Certutil for base64
+
+Hypothesis:
+	An adversary would attempt to evade defenses from common security controls by moving a base64 encoded file to a file share and then using certutil.exe to decode it prior to execution of the malicious code. 
+
+Simulation of Malicious Behavior:
+	--/
+			On Attacker Machine: 
+          1) Open a terminal and encode a malicious script file-
+				  Ex: certutil -encode BadFile.bat tmp.b64 && findstr /v /c:- tmp.b64 > usualFile.b64
+		  	  2) Move file to an admin share-
+				  Ex: COPY usualFile.b64 \\ComputerName\ShareName$
+
+			On Target Machine:
+	      1) Decode the file either remotely or directly on the target-
+	    	Ex: certutil -decode \\ComputerName\ShareName$\usualFile.b64 \\ComputerName\ShareName$\BadFile.bat
+        2) Then execute the script
+	/--
+
+Threat Hunt Process:
+	    In this case, I am narrowing down my search to look for a file being decoded from an Admin share using certutil. To identify this behavior, an EDR tool would be most appropriate. Any file created from the decoding would be logged as a new file/script/executable written by the EDR. This would mostly contain information such as the command line used for decoding a file, the target file name with extension, share path, user details etc., and it may also show the process tree which would help in further investigating any key observations. Careful validation is required to eliminate any known behavior for events that meet the search criteria.
+      Based on the investigation you may identify unknown executables/scripts performing file decodes. This may be indicative of malware. You may also encounter archive files/extensions as a parent process while verifying process trees. Any anomaly identified would require a deeper investigation to look for malicious behavior before and after the decode, collecting the scripts to analyze the code, while reviewing all the command-line arguments run and correlating with other suspicious behavior to reduce the number of false positives.
+	    After completing a thorough investigation, malicious behavior may have been identified. Following the SOP of a malware removal process would be the next step for remediation. Also, it would be a good idea to use a group policy utility to control which users have access to tools such as certutil.
+
+Reference:
+      https://attack.mitre.org/techniques/T1140/
+      https://unit42.paloaltonetworks.com/unit42-sofacy-attacks-multiple-government-entities/
+	
+Sample Splunk Query:
+	event_name=processChange (CommandLine=*certutil* and CommandLine=*decode*)
+	| rename ChildProcessId as ParentProcessId
+	| join ParentProcessId, ComputerName
+		[search event_name=new*written TargetFile=*$*]
