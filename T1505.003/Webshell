@@ -1,0 +1,34 @@
+Persistence via Web Shell on an exposed web server
+
+Hypothesis:
+  A threat actor may backdoor web servers with web shells to establish persistent access to use the Web server as a gateway into the network. Launching further processes from the web shell would result in the IIS web server worker processes (w3wp.exe) acting as the parent process for other processes. By analyzing all the child processes that w3wp.exe launches, threat actor behavior could be identified by eliminating expected and legit processes in an organization.
+
+Simulation of Malicious Behavior:
+	--/
+		Idea from Open-Source Atomic Red Team:  
+    https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1505.003/T1505.003.md
+	/--
+
+Threat Hunt Methodology:
+	This TTP is commonly observed among many APT groups to maintain persistence on a compromised target network. In addition to a server-side script, a Web shell may have a client interface program that is used to talk to the Web server.
+	
+  To hunt for this behavior, an Endpoint Detection and Response (EDR) tool, Microsoft Security Log Event 4688/592 or a host monitoring solution that logs process creation information would be an ideal source to kick start the investigation.
+	
+  Normally when a web server gets compromised a series of events may occur such as a new file being placed on the web server in an easily accessible directory, suspicious commands getting executed from the webshell using cmd/powershell, or the uploading of additional malicious tools to the webserver.
+	
+  In this case, an EDR was used as it holds the process tree map along with the parent child relationship of events that occur in a sequence. A typical process change event would hold information such as the Image name, file information, Process Id’s, System name, User Context information, Command Line arguments, parent file that launched this event etc. By correlating the process launch events using the parent and target process id, child processes launched by w3wp.exe could be identified. The child processes that are launched by the IIS worker process could also be legit, such as configuration tasks, processes related to dotnet, server fault and error logging processes that can be considered safe. With careful analysis of all the child processes, benign and expected processes could be identified based on the business and environment and can subsequently be whitelisted. Any suspicious processes observed should be remediated.
+	
+  Using any other monitoring tool that logs process creation events, other checks could be performed. These include analyzing all new process creation on the host by eliminating known and expected process with the network, analyzing the command line arguments run to look for any scanning behavior, connecting to an external nonbusiness related IP, periodic data transfer to a remote c2c server, or presence of any new archives.  Any of these may lead to potential findings.
+	
+  Any findings observed from the investigation need to be remediated to remove persistence of a threat actor from the compromised system. Based on the criticality of the host and the business risk, the remediation could either be removal of the unknown or suspicious process from the host, examining the host using digital forensics methods to identify attack vectors to build new detection rules, or wiping the host and reimaging it.
+	
+  Some possible precautionary methods to keep your web server protected are: update security patches to the latest available/stable versions, close non-required ports, disable unnecessary web server functions, modify names of sensitive directories, have a web application firewall in front of critical applications, implement file integrity monitoring, and keep your server under monitoring for vulnerabilities and cyber-attacks.
+
+Reference:
+  https://attack.mitre.org/techniques/T1505/003
+	
+Sample Query:
+	Event_name=ProcessChange Parent_File_Name=w3wp.exe
+	| rename Target_Process_Id as Parent_Process_Id
+	| join Parent_Process_Id
+	[search Event_name=ProcessChange]
